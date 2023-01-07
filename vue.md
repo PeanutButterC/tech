@@ -24,7 +24,7 @@ mounted() {
 
 ### Vue中的状态都是默认深层响应式的
 
-深层的对象、数组，都将是响应式的。
+深层的对象、数组，都将是响应式的，这句话的意思是，对象内部某个属性如果被更新，那么Vue会觉察到它的变化从而刷新DOM（如果DOM关联了该属性）
 
 ### 有状态方法的创建时机
 
@@ -95,3 +95,102 @@ computed: {
 <img src="/Users/erfan/Library/Application Support/typora-user-images/截屏2023-01-02 00.38.06.png" alt="截屏2023-01-02 00.38.06" style="zoom: 33%;" />
 
 显然，updated会在DOM更新后被执行一次。我的理解re-render就是刷新模版template（生成新的vdom）。
+
+### watch及附带的async函数知识点、对嵌套状态的监听
+
+我们通常需要在状态变化后，执行一些副作用，比如更改DOM，因为状态变化后，通知watcher -> 触发re-render。
+
+又或者需要做一些异步操作，异步操作通常会用async，除非有必要，调用async函数时，前面是不需要await的，只有async函数内部需要await，意思是在外部作用域，调用async函数即可，还是会接着执行下面的代码，async内部有等待，那是微任务，会之后再执行。示例：
+
+```javascript
+  watch: {
+    'nested.question': {
+      handler(newQuestion, oldQuestion) {
+        if (newQuestion.includes('?')) {
+          // 调用不需要加await，因为本行之后的代码不依赖本行的结果
+          this.getAnswer();
+        }
+      }
+    }
+  },
+  methods: {
+    async getAnswer() {
+      try {
+        this.nested.answer = 'Thinking...';
+        const res = await fetch('https://yesno.wtf/api');
+        this.nested.answer = (await res.json()).answer;
+      } catch (e) {
+        this.nested.answer = 'Error! Could not reach the API. ' + e;
+      }
+    }
+  },
+```
+
+上面代码的'nested.question'，如果仅仅是想监听深层的某个状态，watch时可直接用 . 连接表示路径即可，不支持表达式。
+
+### watch深层监听
+
+watch默认是浅层监听，如果监听一个对象obj，那么除非该obj被完全替换，否则仅仅是其内部的属性更新将不会触发watcher，想要实现深层监听，即内部属性变化，也会触发watcher，需加deep。
+
+```javascript
+data() {
+  return {
+    obj: {
+      name: 'fan',
+      age: 1
+    }
+  }
+}
+watch: {
+  obj: {
+	  handler(newObj, oldObj) {  
+    	
+    },
+    // obj新增、删除、更新属性，都会触发handler，但除非obj被完全替换，否则newObj和oldObj是同一个对象
+    deep: true
+  }
+}
+```
+
+#### ！！谨慎使用深层监听
+
+留意性能，深层监听会遍历对象的所有属性，大型数据结构时，比较费性能
+
+### 即时回调的watcher执行handler的时机、flush的作用
+
+watch默认是懒执行的，仅当数据变化时，才会执行回调，但有时我们希望创建完watcher就立刻执行handler，可用immediate: true实现。
+
+执行时机就在created钩子之前，因为执行created钩子时，Vue已经处理了data、computed、methods，也就是说watcher也已经创建好了，可在此时执行watcher的handler。
+
+### 默认状态下的watcher执行handler的时机
+
+因为一般情况会有：响应式状态变更 -> 通知watcher -> 生成新vnode -> dispatch
+
+所以默认情况下，watcher的handler里访问DOM都是旧的DOM，如果想在handler里访问被Vue更新过的DOM，也就是状态变化后，先更新DOM，再通知watcher执行handler，需要加flush: 'post'。
+
+#### !!问题及猜测
+
+updated钩子是patch之后调用，这个规则肯定不变。不过设置flush: 'post'之后，被监听状态的handler先于updated钩子执行，这是为什么？
+
+猜测是updated钩子不管怎样都仅执行一次。
+
+原来的顺序：响应式状态变化 -> 触发watcher -> re-render -> 生成vnode -> patch -> updated钩子
+
+在加了flush: 'post'之后，会变成：响应式状态变化 -> re-render -> 生成vnode -> patch -> 触发watcher -> updated钩子。
+
+这不过是handler放在patch后执行罢了，依然还是在updated钩子之前。
+
+### 命令式地创建watcher
+
+this.$watch()，应用场景是根据一些条件来确定是否添加watcher。
+
+用选项式watch或命令式创建watcher，宿主组件卸载时会被自动清除，一般情况无需关心何时停止他们，不过也可以用**unwatch()**来主动停止watcher。
+
+#### 
+
+
+
+
+
+
+
