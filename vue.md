@@ -96,6 +96,8 @@ computed: {
 
 显然，updated会在DOM更新后被执行一次。我的理解re-render就是刷新模版template（生成新的vdom）。
 
+computed是计算属性，它应该是在re-render的时候才计算新值，和watcher不一样，不过不管是computed还是watch，一定都是在更新DOM前就要完成的。
+
 ### watch及附带的async函数知识点、对嵌套状态的监听
 
 我们通常需要在状态变化后，执行一些副作用，比如更改DOM，因为状态变化后，通知watcher -> 触发re-render。
