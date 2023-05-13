@@ -34,3 +34,100 @@ transition一般需要一个手动触发的方式，animation定义好后可直�
 ### 5. window.requestAnimationFrame
 
 向浏览器请求一帧动画，浏览器会保证你传入的回调函数在浏览器下一次重刷新之前调用。这样的话就能保证浏览器每刷一屏，动画都会有最新的进展，浏览器每秒刷60次，回调也执行60次。**不会掉帧。**
+
+### 6. 水平垂直居中
+
+```html
+<div class="parent">
+  <div class="child"></div>
+</div>
+```
+
+方案一：flex
+
+```css
+.parent {
+    height: 500px;
+    border: 2px solid red;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.child {
+    width: 100px;
+    height: 100px;
+    background: lightblue;
+    margin: 20px;
+}
+```
+
+效果：
+
+<img src="/Users/erfan/Documents/fan/刷题/前端面试题/css/img/1.png" height="300px">
+
+方案二：position
+
+```css
+.parent {
+  position: relative;
+}
+.child {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  // 1  
+  margin-left: -50px;
+  margin-top:-50px;
+  // 2 *****
+  transform: translate(-50%, -50%)
+  // 3
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+}
+```
+
+方案三：grid布局
+
+```css
+.parent {
+    display: grid;
+}
+.child {
+    justify-self: center;
+    align-self: center;
+}
+```
+
+方案四：【注】在普通的盒子里，即没有flex的盒子里，margin: auto只能将div水平方向上居中
+
+```css
+.parent {
+    display: flex;
+}
+.child {
+    margin: auto;
+}
+```
+
+方案五：利用伪元素+vertical-align
+
+```css
+.parent {
+    text-align: center;		// 将inline-block元素居中
+}
+.parent::before {
+    display: inline-block;
+    content: "";
+    width: 0;
+    height: 100%;
+    vertical-align: middle;		// 由于该伪元素的高度是100%，并且vertical-align是middle，所以父元素的基线就是该元素的middle（中线），同一行的元素都按该线为准。
+}
+.child {
+	display: inline-block;
+    vertical-align: middle;		// 子元素的中线对准父元素的“基线”
+}
+```
+

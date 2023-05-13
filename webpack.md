@@ -169,9 +169,7 @@ console.log(envConfig);
 
 如果type为module，且webpack.config.js是CommonJS规范写的，那么加载webpack.config.js就会报错，因为package.json的type确定了是module，解决办法是改成webpack.config.cjx，并且把打包script里应该加上 --config webpack.config.cjs。
 
-### 讲讲前端模块化以及一些模块化的方案（小红书）
-
-曾经js是没有模块化概念的。
+## 对js模块化的理解
 
 #### js没有模块会怎么样？
 
@@ -182,14 +180,20 @@ console.log(envConfig);
 #### 有了模块会带来什么好处？
 
 1. 可以清晰地看出来模块之间的依赖关系
-2. 可以借助打包工具，将模块合并成单个js文件，进而减少网络开销
+2. 可以借助打包工具，将模块**合并成单个js文件**，进而减少网络开销 
 3. 模块作用域是隔离的
+
+## webpack等模块打包工具解决了什么问题？
+
+曾经js是没有模块化概念的，后来有了模块化，大都是CommonJS、AMD这种模块化方案，还没有像ES6语言层面的模块化，浏览器没办法看懂这些模块，也没法执行，那就一定需要有一个工具来处理你写的这些模块之间的依赖关系，把不同模块的代码按照特定的规则组织在一起不出问题，并且能让浏览器执行。
 
 #### 既然ES6模块已经得到浏览器的支持，那为什么还需要打包，而不是直接让浏览器执行
 
 1. 无法使用代码分片（首屏必须加载全部代码，）和tree shaking（多余的代码）
 2. 目前大多数npm模块还是CommonJS的形式，浏览器并不支持该语法，这些包不能直接拿来用
 3. 个别浏览器以及平台的兼容性问题
+
+### 模块化的方案有哪些？
 
 #### AMD、UMD、CommoJs、ESM
 
@@ -417,11 +421,77 @@ document.write("bar.js", React.version);
 
 最终打包会产生四个bundle：foo.js、bar_js.js、vendor.js、vendors-node_modules_react_index_js.js，分别是foo入口生成的bundle、异步bundle、vendor bundle。
 
+### 什么是Tapable？
+
+tap有监听的意思，Tapable是webpack中的一个类，所有由这个类产生的实例都是可监听的；所有webpack中的插件都继承了Tapable（webpack5之后就不再继承了，但API都一样）。
+
+### Loader解决了什么问题，常见的Loader有哪些？
+
+webpack只能识别js和json，其它类型需要Parser用Loader先处理。
+
+常见的Loader有sass-loader，css-loader，style-loader，file-loader，url-loader
+
+### Plugin解决了什么问题，常见的plugin有哪些？
+
+plugin为webpack提供灵活的功能，比如打包优化、资源管理、环境变量注入等。它们会在webpack的不同生命周期运行，解决Loader无法解决的问题。
+
+Plugin本质是具有apply方法的对象，监听Compiler、Compilation的各个hook，在适当的时候调用。
+
+下面是两个plugin的基本结构，该plugin监听了Compiler的afterResolvers hook，在插件被创建时，就会执行apply方法，这里使用了tap方法，具体使用tap、tapAsync还是tapPromise，取决于hook在webpack中是如何定义的。
+
+```javascript
+class MySyncWebpackPlugin {
+  apply(compiler) {
+    compiler.hooks.afterResolvers.tap('MySyncWebpackPlugin', (compilation) => {
+      console.log('[compilation] > ', compilation);
+    });
+  }
+}
+```
+
+```javascript
+class MyAsyncWebpackPlugin {
+  apply(compiler) {
+    compiler.hooks.done.tapAsync('MyAsyncWebpackPlugin', (stats, cb) => {
+      setTimeout(() => {
+        console.log('[stats] > ', stats);
+        cb();
+      }, 1000);
+    });
+  }
+}
+```
+
+常见的Plugin有：
+
+1. HtmlWebpackPlugin，打包结束后，会生成一个html模板，并把打包好的bundle插入到模板中。
+2. mini-css-extract-plugin，提取css到一个单独的文件中。
+3. DefinePlugin，创建一个全局变量，在整个编译阶段都能获取到这个变量。
+
+### tap、tapAsync、tapPromise的区别
+
+tap的作用是监听hook，给tap传的回调函数需要是同步的，而tapAsync中的回调可以是异步的，tapPromise只是tapAsync的另一种写法，只是它返回的是promise。
+
 ### loader和plugin的区别
 
 1. webpack只能识别js，对于其它类型的资源，比如图片、css，需要用loader进行转译为webpack能接收的形式，再进行打包；
 2. plugin赋予webpack丰富的功能，比如环境变量注入（definePlugin）;
-3. loader运行在打包之前，plugin在整个编译周期都起作用；
+3. loader运行在打包之前，由Parser实例在解析Module Factor传来的模块对象时启用，plugin在整个编译周期都起作用；
+
+### 编写Loader的思路
+
+1. Loader的本质是函数，函数中的this是由webpack提供的对象，可以获取当前loader所需要的所有信息，所以Loader不能是一个箭头函数。
+2. 保证Loader的功能单一，比如less转换成css需要less-loader、css-loader、style-loader这个链式调用才能拿到最后的结果。
+
+### 编写Plugin的思路
+
+1. webpack基于发布订阅模式，plugin需要监听Compiler和Compilation中的hook，在特定的时机执行自己的任务
+2. 插件必须是一个包含apply方法的对象， 或者是一个函数；
+3. 异步的事件需要在插件处理完任务时调用回调函数通知 `Webpack` 进入下一个流程
+
+### 什么是HMR？实现的原理是什么？
+
+HMR全程是Hot Module Replacement，更改某个模块后，webpack会重新打包，并将新的模块发送给浏览器，浏览器用新的模块替换旧的模块，这样就不必刷新整个应用，依然维持当前状态。
 
 ### 首屏优化有哪些方案
 
@@ -459,4 +529,125 @@ preload是页面的渲染必定会用到某个资源，在最开始就请求它�
 
 确定打包入口、输出文件，引入各种loader、plugin
 
-### 还用webpack干什么
+### webpack插件（taptable）
+
+## webpack利用文件系统缓存
+
+webpack.config.js文件中的cache字段可以配置缓存策略，在build模式下，因为打包完webpack进程就会关掉，所以只能使用文件系统缓存，配置为：config.type: 'filesystem'；在watch模式下，缓存放在内存中，由webpack自身来管理，不用人工介入。
+
+按照缓存规则，在打包一次之后，webpack会将module、chunk、moduleGraph缓存下来，下一次打包如果发现某个文件源代码变了，就要重新编译该文件，如果没有变，则直接使用缓存。
+
+管理缓存的方法：
+
+1. 打包依赖。有一些特殊的依赖包，如果它的源码变了，就要让全部的缓存失效，整个重来，所以可以在cache.buildDependencies中配置好这些特殊的依赖。
+2. 缓存名称。webpack默认使用`${config.name}-${config-mode}`的目录形式存放缓存，即使源代码不变，在dev模式下的打包缓存会放在`${config.name}-development`文件夹下，而在prod模式下打包的缓存会放在`${config-name}-production`目录下。
+3. 缓存版本。当赋予cache.version一个新值时，打包就不会再使用旧的缓存了。
+
+## Compiler是什么？
+
+Compiler是webpack中的一个核心类，它控制着总任务流，把任务分给其他模块（大多都是插件，这些插件和通过npm安装引入到webpack配置中的茶碱没有本质区别）来做。Compiler的工作方式是暴露出整个工作流程中的hook，插件监听这些hook，在相应的时机完成工作，所以，Compiler只负责做调度，掌控整体节奏而不负责具体工作。
+
+## Compilation是什么？
+
+它也是webpack中处于核心地位的一个类，可以把Compiler看成是总指挥官，而Compilation是总管，负责更细致的工作。它也有很多hook，让其他模块监听更细致的事物。
+
+## Resolver是什么？
+
+找到入口文件、构建依赖关系图时寻找每个依赖文件都是Resolver的工作。但Resolver并不会返回源代码，而是返回找到的这个模块的相关信息。
+
+## Module Factor是什么
+
+Module Factor类似于函数，接收的是Resolver返回的信息，返回的是模块对象（包含源码）。
+
+## Parser是什么？
+
+从Module Factor得到的模块源代码是各式各样的，要将它们变成webpack能够理解的形式，因此，就由Parser来根据webpack的配置，用不同的loader将它们都变成js。
+
+将源代码都转译成js后，Parser还需要将这些js转化为抽象语法树，并进一步寻找依赖，如果又找到了新的依赖，就继续使用Resolver、Module Factor。直到所有的模块都处理完毕。
+
+## webpack的构建流程（打包机制）
+
+1. 准备工作，通过命令行和配置文件获取本次打包所需的配置项，对配置项进行一次检查；
+2. 缓存加载，根据配置文件中的cache字段的配置来加载已有的缓存，利用缓存可提高构建效率。
+3.  模块打包
+   - 首先，初始化Compiler和Compilation，这只是打包流程的开始；
+   - 下一步是构建依赖关系图，其步骤是：从入口开始，由Resolver找到模块的具体位置，返回模块信息（不包含源码）；Module Factor拿到模块信息后返回模块对象（包含源码）；Parser按照配置规则，使用对应的loader将模块转化为js，随后将js解析为AST，并进一步寻找依赖；循环此步骤直到所有的依赖都被处理完成。webpack把这些最终的产物组合在一起，生成chunk（此处会有特殊处理，比如异步module会被单独打成一个chunk）
+   - 最后，用模板渲染将chunk转化为最后的代码（bundle）。模板渲染实际上就是根据依赖关系图以及前面各步骤得到的模块信息，让webpack组织和拼装模板（对于不同类型的模块，webpack都有对应的模板），把实际模块内容填进去，最终“渲染”得到我们看到的目标代码。可以理解成webpack已经搭好了架子，就等着把模块内容填进去了。
+
+## live reload 和 HMR的区别
+
+live reload是修改代码后自动触发浏览器刷新，HMR不会刷新浏览器，会替换修改的部分，而保证原来的页面状态不变，从而节省开发者大量的时间成本。
+
+## webpack热更新（HMR）的原理？
+
+如果是本地开发，浏览器将作为客户端，webpack-dev-server作为服务端，HMR的核心是客户端从服务端拉取更新后的资源（实际上是chunk diff）。
+
+1. 浏览器何时拉取这些更新？WDS和浏览器之间维护一个websocket，并且WDS对本地文件进行监听，当本地文件发生改变时，WDS向浏览器推送更新事件，并带上这次构建的hash，让客户端和上一次资源的hash进行对比，一样就不用变；
+2. 拉取什么？当对比hash后确定有改动，浏览器就向WDS发请求获取更改文件的列表，即哪些模块有了改动，请求的名字通常为[hash].hot-update.json；
+3. WDS告知需要更新的chunk为某一个模块后（比如是main），浏览器继续向WDS获取该chunk的增量更新，拿到结果。
+4. 要如何处理获取到的增量更新？哪些地方要更新？这不属于webpack的工作了，react-hot-loader和vue-loader借助webpack的API来实现HMR。
+
+## webpack proxy工作原理？为什么能够解决跨域问题？
+
+webpack proxy仅用于本地**开发模式**下解决跨域问题，因为浏览器有同源策略，调试的时候webpack-dev-server开的服务地址一般都是localhost，后端资源又在其他服务器上，肯定会被浏览器的同源策略限制导致跨域问题。
+
+但是服务器与服务器之间请求数据并不存在跨域问题，跨域行为只是浏览器的安全策略限制，因此，在浏览器请求跨域资源时，利用webpack的proxy代理一下，然后转发给浏览器，而代理服务器传递数据给本地时，因为两者同源，就不存在跨域问题了。
+
+proxy工作原理：利用http-proxy-middleware实现把请求转发给其他服务器。
+
+```javascript
+const express = require('express');
+const proxy = require('http-proxy-middleware');
+
+const app = express();
+
+app.use('/api', proxy({target: 'http://www.example.org', changeOrigin: true}));
+app.listen(3000);
+```
+
+webpack像下面这样配置，proxy的属性名就是匹配规则
+
+```javascript
+module.exports = {
+    // ...
+    devServer: {
+        contentBase: path.join(__dirname, 'dist'),
+        compress: true,
+        port: 9000,
+        proxy: {
+            '/api': {
+                target: 'https://api.github.com'
+            }
+        }
+        // ...
+    }
+}
+```
+
+## 利用webpack来优化前端性能的方法
+
+从两个方面入手：
+
+1. 压缩文件体积，比如Tree Shaking、js代码压缩（terser-webpack-plugin，默认的）、css压缩（css-minimizer-webpack-plugin）、html压缩（HtmlWebpackPlugin）；
+2. 代码分包（split chunk），让首屏的bundle小一点，按需加载；
+
+## 如何提高webpack的构建速度
+
+从三个方面入手：
+
+1. 优化搜索时间
+   - 对于引入时没有尾缀的文件，采用 resolve.extensions，把频率最高的尾缀放在前面
+   - 用resolve.alias，直接确定文件所在的绝对路径，相对路径会一层一层寻找
+2. 缩小文件搜索范围
+   - 使用loader时，用include、exclude，把不必要使用loader的文件排除掉
+   - 用resolve.modules配置webpack去哪些目录下寻找第三方模块
+3. 减少不必要的编译
+   - 合理使用sourceMap，越详细打包越慢
+   - 对开销较大的loader使用cache-loader，显著减少第二次打包的时间
+
+## 还有哪些模块打包工具？
+
+1. Rollup是ES module打包器，代码简洁，效率高，默认Tree-Shaking，但不支持HMR，并且对于CommonJS模块的打包需要使用插件，而当前大部分的第三方库都是CommonJS，因此Rollup不太适合开发应用使用，但对于js库很不错，打包快、体积小。
+2. Parcel不需要配置，只需了解简单的命令，即可打包。
+3. Snowpack
+4. Vite，`vite`会直接启动开发服务器，不需要进行打包操作，也就意味着不需要分析模块的依赖、不需要编译，因此启动速度非常快。它由一个开发服务器和一套构建指令组成，用Rollup打包代码。在HMR方面，当修改一个模块时，仅仅需要让浏览器请求该模块即可。

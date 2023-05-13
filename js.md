@@ -466,9 +466,9 @@ user.name = "John"; // alerts: SET name=John
 
 ### 什么是变量提升
 
-用var和function生明的变量，可以在声明它们之前访问。js代码被执行时，会创建全局执行上下文，随后执行，在创建阶段，js引擎将var和function的声明移到顶层，这就是js的变量提升。
+用var和function声明的变量，可以在声明它们之前访问。js代码被执行时，会创建全局执行上下文，随后执行，在创建阶段，js引擎将var和function的声明移到顶层，这就是js的变量提升。
 
-注：var声明的变量会给一个undefined，function一开始就是完整的函数，let、const、函数表达式、箭头函数都不会变量提升。var和function对于重复的声明都会后者覆盖前者（非严格模式下）。
+注：var声明的变量会给一个undefined，**function一开始就是完整的函数**，let、const、class、函数表达式、箭头函数都不会变量提升。var和function对于重复的声明都会后者覆盖前者（非严格模式下）。
 
 ### js数据类型
 
@@ -546,6 +546,10 @@ a &&= b，a为真，就把b赋值给a；
 
 a ??= b，a为undefined或null，就把b赋值给a；
 
+### 可选链`?.`有什么用
+
+`obj.a ?. b`，当obj.a为undefined或null时，不会引起错误，并且返回undefined。
+
 ### 用new创建对象的时候发生了什么
 
 1. 在内存中创建一个新的对象；
@@ -580,6 +584,18 @@ call比apply的性能要好，call传入参数的格式正是内部所需要的�
 1. 原型链继承，子构造函数的原型指向父构造函数的原型
 
 2. 借用构造函数，在子构造函数中用call调用父构造函数，于是子构造函数就拥有了父构造函数中的属性、方法
+
+   ```javascript
+   function Person(name, age) {
+     this.name = name;
+     this.age = age;
+   }
+   
+   function Student(name, age, school) {
+     Person.call(this, name, age);
+     this.school = school;
+   }
+   ```
 
 3. 组合继承，融合原型链和借用构造函数，把公共方法放在原型上，其它借用构造函数
 
@@ -646,7 +662,7 @@ let gen = {
 
 为了处理这种情况，采用**WeakMap**，比如当前拷贝gen，就把gen加入WeakMap中，下次再遇到有人引用gen就直接取这个WeakMap中的gen，而不用重新复制。
 
-为什么不用Map而使用WeakMap呢？因为WeakMap会清掉没有被引用的键值对，也就是说如果我拷贝gen的时候，把它加入WeakMap，但是并没有遇到有人引用gen，那gen就可以被垃圾回收机制周期性清除了，节省空间。
+为什么不用Map而使用WeakMap呢？因为WeakMap会清掉没有被引用的键值对，也就是说如果我拷贝gen的时候，把它加入WeakMap，但是并没有遇到有人引用gen，那gen就可以被垃圾回收机制周期性清除了，节省空间。另一方面，WeakMap的key刚好只能是引用类型。
 
 ### this指向
 
@@ -860,3 +876,24 @@ Cookie、localStorage、sessionStorage、indexedDB
 1. 避免命名重复
 2. 在call、apply中有用到
 3. 在迭代器迭代函数名用的就是`Symbol.iterator`
+
+### 下面代码能执行吗
+
+能，无限循环
+
+```javascript
+function demo2() {
+  console.log(2);
+  return Promise.resolve().then(demo2);
+}
+
+demo2();
+
+// ======
+function demo1() {
+  setTimeout(demo1, 0);
+}
+
+demo1();
+```
+
