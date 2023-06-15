@@ -7,7 +7,7 @@
 下面this.obj是一个Proxy，并不是属性值本身
 
 ```javascript
-data() {
+ddata() {
   return {
     obj: {}
   }
@@ -86,19 +86,19 @@ computed: {
 
 ### updated钩子执行时机
 
-我们知道Vue有一个概念叫模版template，我曾一直困惑，Vue状态改变，updated钩子什么时候执行，是在页面刷新之后？还是之前？
+我们知道Vue有一个概念叫模板template，我曾一直困惑，Vue状态改变，updated钩子什么时候执行，是在页面刷新之后？还是之前？
 
-触发setter(状态更新) -> 通知watcher -> 触发re-render -> 生成new vnode(vdom) -> patch（更新真实DOM）-> 触发updated钩子 -> 触发nextTick回调（微任务）
+触发setter(状态更新) -> 通知watch -> 触发re-render -> 生成new vnode(vdom) -> patch（更新真实DOM）-> 触发updated钩子 -> 触发nextTick回调（微任务）
 
 <img src="/Users/erfan/Library/Application Support/typora-user-images/截屏2023-01-02 00.38.06.png" alt="截屏2023-01-02 00.38.06" style="zoom: 33%;" />
 
-显然，updated会在DOM更新后被执行一次。我的理解re-render就是刷新模版template（生成新的vdom）。
+显然，updated会在DOM更新后被执行一次。re-render就是刷新模版template（生成新的vdom）。
 
-computed是计算属性，它应该是在re-render的时候才计算新值，和watcher不一样，不过不管是computed还是watch，一定都是在更新DOM前就要完成的。
+computed是计算属性，它应该是在re-render的时候才计算新值（或者取缓存），和watch不一样，不过不管是computed还是watch，一定都是在更新DOM前就要完成的。
 
 ### watch及附带的async函数知识点、对嵌套状态的监听
 
-我们通常需要在状态变化后，执行一些副作用，比如更改DOM，因为状态变化后，通知watcher -> 触发re-render。
+我们通常需要在状态变化后，执行一些副作用，比如更改DOM，因为状态变化后，通知watch -> 触发re-render。
 
 又或者需要做一些异步操作，异步操作通常会用async，除非有必要，调用async函数时，前面是不需要await的，只有async函数内部需要await，意思是在外部作用域，调用async函数即可，还是会接着执行下面的代码，async内部有等待，那是微任务，会之后再执行。示例：
 
@@ -164,7 +164,7 @@ watch默认是懒执行的，仅当数据变化时，才会执行回调，但有
 
 ### 默认状态下的watcher执行handler的时机
 
-因为一般情况会有：响应式状态变更 -> 通知watcher -> 生成新vnode -> dispatch
+因为一般情况会有：响应式状态变更 -> 通知watch -> 生成新vnode -> dispatch
 
 所以默认情况下，watcher的handler里访问DOM都是旧的DOM，如果想在handler里访问被Vue更新过的DOM，也就是状态变化后，先更新DOM，再通知watcher执行handler，需要加flush: 'post'。
 
@@ -185,63 +185,6 @@ updated钩子是patch之后调用，这个规则肯定不变。不过设置flush
 this.$watch()，应用场景是根据一些条件来确定是否添加watcher。
 
 用选项式watch或命令式创建watcher，宿主组件卸载时会被自动清除，一般情况无需关心何时停止他们，不过也可以用**unwatch()**来主动停止watcher。
-
-### 谈谈devServer.devMiddleware.publicPath和output.publicPath
-
-从字面上看，publicPath，有“公共”的意思，也就是不论访问什么资源，它的路径都有这个公共路径。
-
-从定义上看，publicPath是资源的请求位置，也就是部署上线之后，资源都从这个位置去获取。
-
-publicPath有三种形式：
-
-1. 和html文件的位置相关，即静态资源放在和html相对的位置，举例：
-
-   ```javascript
-   // 假设index.html的位置在http://example.com/app/index.html
-   // 此时将publicPath设置成不同的值，访问bundle.js的实际路径会不同
-   publicPath: ''	// 实际路径：http://example.com/app/bundle.js
-   publicPath: './js'	// 实际路径：http://example.com/js/bundle.js
-   publicPath：'../assets/'	// 实际路径：http://example.com/
-   ```
-
-2. 和host相关，即不管index.html在哪个路径，静态资源都和html文件没关系，只和host相关，举例
-
-   ```javascript
-   // 假设index.html的位置在http://example.com/app/index.html
-   // 下面访问bundle.js
-   publicPath: '/'	// 实际路径：http://example.com/bundle.js
-   publicPath: '/js/'	// 实际路径：http://example.com/js/bundle.js
-   publicPath: '/dist/'	// 实际路径：http://example.com/dist/bundle.js
-   ```
-
-3. 和cdn相关，这种情况是把静态资源都放在cdn上面，由于cdn域名与当前页面域名不一样，需要以绝对路径的形式，举例：
-
-   ```javascript
-   // 假设index.html的位置在http://example.com/app/index.html
-   // 下面访问bundle.js
-   publicPath: 'http://cdn.com/'	// 实际路径：http://cdn.com/bundle.js
-   publicPath: 'https://cdn.com/'  // 实际路径：https://cdn.com/bundle.js
-   publicPath: '//cdn.com/assets/'	// 实际路径：//cdn.com/assets/bundle.js
-   ```
-
-只要是用webpack打包，并且设置了publicPath的，打包后所有的静态资源，访问它们的路径都会拼上publicPath。即使你启动了webpack-dev-server，该server实际也会先打包，也都会用到output.publicPath拼接资源路径，只是打包结果都放在内存中，不会输出到文件，然后再把它们部署好。
-
-devServer.devMiddleware.publicPath，它的作用就是让你在请求资源时，请拼上该publicPath，比如想拿到index.html，publicPath是‘/dist/’，那么你必须用`http://localhost:8080/dist/index.html`才能拿到该文件。
-
-### 为什么output里的publicPath和devServer里的publicPath要保持一致？
-
-直接举例：
-
-```javascript
-output.publicPath = '/dist/'
-devServer.devMiddleware.publicPath = '/assets'
-```
-
-启动webpack-dev-server后，静态资源（比如bundle.js）的地址被拼接为`http://localhost/dist/bundle.js`。
-而启动devServer后，资源实际的位置在`http://localhost:8080/assets/xxx`
-但是请问能访问到吗，当然不行，/dist/bundle.js，根本就没有这个东西。
-
-因此，让两个publicPath保持一致，就不会出错了。
 
 ### MVVM模型
 
@@ -345,7 +288,7 @@ vue-router巧妙利用浏览器已有的两种方式，实现了前端路由
 1. hash：思路是hashchange事件
 2. history：思路是history.pushState()和history.replaceSate()
 
-### 服务端渲染SSR（Server Side Render）
+### 服务端渲染SSR（Server Side Render）（频率：1）
 
 Vue本是用于构建客户端应用的框架，默认情况下只负责操作浏览器DOM，然而Vue也支持在服务端直接将组件渲染成HTML字符串，作为响应返回给浏览器，最后在浏览器中将静态的HTML“激活”为可以交互的客户端应用，这就是服务端渲染。
 
@@ -725,7 +668,7 @@ mounted() {
 
 #### 原理
 
-只要Vue状态变化（就会执行该状态的副作用函数，当然，副作用函数和watcher是两回事），Vue就将开启一个队列，缓冲本事件循环中所有变化数据的watcher（用来更新DOM的函数，watcher会取最新的状态来更新DOM），并保证队列中同样的watcher只有一个；nextTick 方法会确保回调函数在下一个事件循环开始的时候，执行完队列中的全部watcher（这会更新视图），最后再执行nextTick的回调函数。
+只要Vue状态变化（就会执行该状态的副作用函数，副作用函数和watcher是两回事），Vue就将开启一个队列，缓冲本事件循环中所有变化数据的watcher（用来更新DOM的函数，watcher会取最新的状态来更新DOM），并保证队列中同样的watcher只有一个；nextTick 方法会确保回调函数在下一个事件循环开始的时候，执行完队列中的全部watcher（这会更新视图），最后再执行nextTick的回调函数。
 
 nextTick是微任务，根据执行环境分别尝试采用 Promise、MutationObserver、setImmediate，如果以上都不行则采用 setTimeout。
 
@@ -1151,7 +1094,7 @@ Vue3中已经没有.sync修饰符了，Vue3中v-model也可以绑定多个值，
 
 vue3引入的patch优化：patchFlags（在compile阶段，将使用了动态绑定的地方进行标记，这样在runtime阶段使用patch的时候，可快速找出要patch的地方，靶向更新，性能更高）、block。
 
-### Vue3的8种通信方式
+### Vue3的8种组件方式
 
 1. props，父子组件传值
 2. emit，子组件触发父组件的方法

@@ -25,15 +25,15 @@ BFC会有一些特性：
 
 给这个二维区域加上点击事件监听器，在冒泡阶段触发处理函数（捕获阶段无法实现），addEventListener的第三个参数useCapture为false即可。即使二维区域html元素是relative或absolute定位也不影响，因为DOM实体就是在偏移后的位置。
 
-### 4. transform、transition和animation的区别（待详细化）
+### 4. transform、transition和animation的区别
 
-transform是将元素位移、旋转等，transition是定义动画
-
-transition一般需要一个手动触发的方式，animation定义好后可直接播放
+1. transform是将元素位移、旋转、放大缩小等；
+2. transition是定义动画，比如`transition: all 0.5s ease-in 1s;`，就是说被元素任意的属性改变都要用这个动画效果，需要一个手动触发的方式。
+3. animation定义好后可直接播放，`animation: move-to-right 2s ease-in 2s;`额外需要定义关键帧`@keyframes {}`
 
 ### 5. window.requestAnimationFrame
 
-向浏览器请求一帧动画，浏览器会保证你传入的回调函数在浏览器下一次重刷新之前调用。这样的话就能保证浏览器每刷一屏，动画都会有最新的进展，浏览器每秒刷60次，回调也执行60次。**不会掉帧。**
+向浏览器请求一帧动画，浏览器会保证你传入的回调函数在浏览器下一次重刷新之前调用。这样的话就能保证浏览器每刷一屏，动画都会有最新的进展，浏览器每秒刷60次，回调如果也能在1s内执行60次，那么就相当丝滑，**不会掉帧。**
 
 ### 6. 水平垂直居中
 
@@ -131,3 +131,8 @@ transition一般需要一个手动触发的方式，animation定义好后可直�
 }
 ```
 
+### css module的原理
+
+
+
+### 头部底部固定中间两栏布局

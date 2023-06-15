@@ -189,7 +189,7 @@ console.log(envConfig);
 
 #### 既然ES6模块已经得到浏览器的支持，那为什么还需要打包，而不是直接让浏览器执行
 
-1. 无法使用代码分片（首屏必须加载全部代码，）和tree shaking（多余的代码）
+1. 无法使用代码分片（首屏必须加载全部代码）和tree shaking（多余的代码）
 2. 目前大多数npm模块还是CommonJS的形式，浏览器并不支持该语法，这些包不能直接拿来用
 3. 个别浏览器以及平台的兼容性问题
 
@@ -259,11 +259,11 @@ webpack-dev-server启动后，并不会把打包后的bundle真实地写到dist/
 
 ### CommonJS和ESM的区别
 
-1. 一个动态，一个静态，CommonJS模块依赖关系的建立发生在代码运行阶段，所以是动态的。ESM模块关系的建立发生在编译阶段，是静态的。
+1. CommonJS模块依赖关系的建立发生在代码运行阶段，所以是动态的。ESM模块关系的建立发生在编译阶段，是静态的。
 
 2. CommonJS支持通过if条件判断来require，也支持require()参数是表达式，而ESM都不支持。
 
-3. 由于ESM的的导入导出是静态的，可在编译阶段就分析出模块的依赖关系，因此可以进行**死代码检测和排除**，也可以进行**模块变量类型检查**，以及**编译器优化**（CommonJS导入的都是对象，而ESM支持直接导入变量，减引用层级，程序效率更高）
+3. 由于ESM的的导入导出是静态的，可在编译阶段就分析出模块的依赖关系，因此可以进行**死代码检测**，提前删掉，也可以进行**模块变量类型检查**，以及**编译器优化**（CommonJS导入的都是对象，而ESM支持直接导入变量，减少层层引用，程序效率更高）
 
 4. 值复制与动态映射，CommonJS导出的是值的副本，而ESM导出了值的映射。CommonJS可以更改导入的值，因为它本身就是一个副本，不会影响到原模块中的值，而ESM不允许对导出值进行更改。
 
@@ -288,7 +288,7 @@ webpack-dev-server启动后，并不会把打包后的bundle真实地写到dist/
    bar.js
    ```
 
-   foo.js被首次加载后，遇到require('foo.js')，控制权交给bar.js，此时又require('foo.js')，由于foo.js还未执行完，没有完整的导出，所以，在bar.js中只能拿到一个空对象{}，待bar.js执行完，控制权交给foo.js，此时已经拿到bar.js的完整导出。
+   foo.js被首次加载后，遇到require('bar.js')，控制权交给bar.js，此时又require('foo.js')，由于foo.js还未执行完，没有完整的导出，所以，在bar.js中只能拿到一个空对象{}，待bar.js执行完，控制权交给foo.js，此时已经拿到bar.js的完整导出。
 
    **因此，如果在CommonJS中遇到循环依赖，我们将没有办法得到预想中的结果。**
 
@@ -305,6 +305,8 @@ npm安装好将要用到的包后，直接引入即可
 ```shell
 npm install lodash
 ```
+
+
 
 ```javascript
 import _ from 'lodash';
@@ -380,47 +382,6 @@ module.exports = {
 }
 ```
 
-### 打包时提取vendor的好处（不全）
-
-vender意思为供应商，在webpack里表示工程所使用的库、框架等第三方块集中打包而产生的bundle。
-
-不管是一个还是多个入口，如果能够把它们中的第三方库、框架提取出来单独打成一个bundle，就可以充分利用客户端的缓存，减小请求bundle的体积。第三方库不会经常变动，经常变的是我们的业务bundle，这样客户端再次请求页面时，只需要拿我们的业务bundle，第三方库bundle直接用本地缓存的，就可以提升整个页面的渲染速度。
-
-下面是一个例子，需要用到optimization.splitChunks：
-
-```javascript
-// webpack.config.js
-module.exports = {
-  entry: {
-   	foo: './src/foo.js',
-    vendor: ['react'],    
-  }
-  output: {
-    path: path.resolve(__dirname, 'dist')
-  },
-  optimization: {
-    splitChunks: {
-      // 将选择哪些 chunk 进行优化
-      // 表示splitChunks将会对所有的chunk生效，默认情况只对异步chunks生效，并且不需要配置
-      chunks: 'all'
-    }
-  }
-}
-```
-
-```javascript
-// foo.js
-import React from "react";
-import("./bar.js");
-document.write("foo.js", React.version);
-
-// bar.js
-import React from "react";
-document.write("bar.js", React.version);
-```
-
-最终打包会产生四个bundle：foo.js、bar_js.js、vendor.js、vendors-node_modules_react_index_js.js，分别是foo入口生成的bundle、异步bundle、vendor bundle。
-
 ### 什么是Tapable？
 
 tap有监听的意思，Tapable是webpack中的一个类，所有由这个类产生的实例都是可监听的；所有webpack中的插件都继承了Tapable（webpack5之后就不再继承了，但API都一样）。
@@ -472,7 +433,7 @@ class MyAsyncWebpackPlugin {
 
 tap的作用是监听hook，给tap传的回调函数需要是同步的，而tapAsync中的回调可以是异步的，tapPromise只是tapAsync的另一种写法，只是它返回的是promise。
 
-### loader和plugin的区别
+### Loader和Plugin的区别
 
 1. webpack只能识别js，对于其它类型的资源，比如图片、css，需要用loader进行转译为webpack能接收的形式，再进行打包；
 2. plugin赋予webpack丰富的功能，比如环境变量注入（definePlugin）;
@@ -489,13 +450,9 @@ tap的作用是监听hook，给tap传的回调函数需要是同步的，而tapA
 2. 插件必须是一个包含apply方法的对象， 或者是一个函数；
 3. 异步的事件需要在插件处理完任务时调用回调函数通知 `Webpack` 进入下一个流程
 
-### 什么是HMR？实现的原理是什么？
-
-HMR全程是Hot Module Replacement，更改某个模块后，webpack会重新打包，并将新的模块发送给浏览器，浏览器用新的模块替换旧的模块，这样就不必刷新整个应用，依然维持当前状态。
-
 ### 首屏优化有哪些方案
 
-1. 尽量减小打包的体积
+1. 尽量减小打包的体积，控制在14KB内以应对TCP慢启动
    - 将大部分用于调试的日志放在开发模式下，而生产模式不输出这些日志
    - 按需引入代码
    - 组件懒加载（prefetch，webpack路由组件添加特殊注释）
@@ -528,8 +485,6 @@ preload是页面的渲染必定会用到某个资源，在最开始就请求它�
 ### 如何使用webpack来打包的
 
 确定打包入口、输出文件，引入各种loader、plugin
-
-### webpack插件（taptable）
 
 ## webpack利用文件系统缓存
 
@@ -651,3 +606,60 @@ module.exports = {
 2. Parcel不需要配置，只需了解简单的命令，即可打包。
 3. Snowpack
 4. Vite，`vite`会直接启动开发服务器，不需要进行打包操作，也就意味着不需要分析模块的依赖、不需要编译，因此启动速度非常快。它由一个开发服务器和一套构建指令组成，用Rollup打包代码。在HMR方面，当修改一个模块时，仅仅需要让浏览器请求该模块即可。
+
+## 谈谈devServer.devMiddleware.publicPath和output.publicPath
+
+从字面上看，publicPath，有“公共”的意思，也就是不论访问什么资源，它的路径都有这个公共路径。
+
+从定义上看，publicPath是资源的请求位置，也就是部署上线之后，资源都从这个位置去获取。
+
+publicPath有三种形式：
+
+1. 和html文件的位置相关，即静态资源放在和html相对的位置，举例：
+
+   ```javascript
+   // 假设index.html的位置在http://example.com/app/index.html
+   // 此时将publicPath设置成不同的值，访问bundle.js的实际路径会不同
+   publicPath: ''	// 实际路径：http://example.com/app/bundle.js
+   publicPath: './js'	// 实际路径：http://example.com/js/bundle.js
+   publicPath：'../assets/'	// 实际路径：http://example.com/
+   ```
+
+2. 和host相关，即不管index.html在哪个路径，静态资源都和html文件没关系，只和host相关，举例
+
+   ```javascript
+   // 假设index.html的位置在http://example.com/app/index.html
+   // 下面访问bundle.js
+   publicPath: '/'	// 实际路径：http://example.com/bundle.js
+   publicPath: '/js/'	// 实际路径：http://example.com/js/bundle.js
+   publicPath: '/dist/'	// 实际路径：http://example.com/dist/bundle.js
+   ```
+
+3. 和cdn相关，这种情况是把静态资源都放在cdn上面，由于cdn域名与当前页面域名不一样，需要以绝对路径的形式，举例：
+
+   ```javascript
+   // 假设index.html的位置在http://example.com/app/index.html
+   // 下面访问bundle.js
+   publicPath: 'http://cdn.com/'	// 实际路径：http://cdn.com/bundle.js
+   publicPath: 'https://cdn.com/'  // 实际路径：https://cdn.com/bundle.js
+   publicPath: '//cdn.com/assets/'	// 实际路径：//cdn.com/assets/bundle.js
+   ```
+
+只要是用webpack打包，并且设置了publicPath的，打包后所有的静态资源，访问它们的路径都会拼上publicPath。即使你启动了webpack-dev-server，该server实际也会先打包，也都会用到output.publicPath拼接资源路径，只是打包结果都放在内存中，不会输出到文件，然后再把它们部署好。
+
+devServer.devMiddleware.publicPath，它的作用就是让你在请求资源时，请拼上该publicPath，比如想拿到index.html，publicPath是‘/dist/’，那么你必须用`http://localhost:8080/dist/index.html`才能拿到该文件。
+
+## 为什么output里的publicPath和devServer里的publicPath要保持一致？
+
+直接举例：
+
+```javascript
+output.publicPath = '/dist/'
+devServer.devMiddleware.publicPath = '/assets'
+```
+
+启动webpack-dev-server后，静态资源（比如bundle.js）的地址被拼接为`http://localhost/dist/bundle.js`。
+而启动devServer后，资源实际的位置在`http://localhost:8080/assets/xxx`
+但是请问能访问到吗，当然不行，/dist/bundle.js，根本就没有这个东西。
+
+因此，让两个publicPath保持一致，就不会出错了。

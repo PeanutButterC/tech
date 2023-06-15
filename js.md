@@ -289,7 +289,7 @@ loadScript("./lib.js");
 
 <img src="/Users/erfan/Library/Application Support/typora-user-images/截屏2023-03-20 12.12.51.png" alt="截屏2023-03-20 12.12.51" style="zoom: 50%;" />
 
-### Object.defineProperty和Proxy的区别（小红书）
+### Object.defineProperty和Proxy的区别
 
 一般都是在讨论在Vue中的区别，也就是它们在实现数据劫持时的区别。
 
@@ -347,7 +347,7 @@ list.forEach((ele, idx) => {
 
 ### Reflect是什么，和Proxy搭配使用
 
-Reflect提供了与内置方法`[[get]]、[[set]]`（当定义了访问器属性时，`[[get]][[set]]`就会被访问器属性覆盖）一样的能力，当你取一个对象的属性时`obj.name`，它实际是调用了内置方法`[[get]]`，但这个get是无法被我们显市调用的。Reflect就可以让我们显式调用这个`[[get]]`：`Reflect.get(obj, name)`，这和`obj.name`是一样的效果。
+Reflect提供了与内置方法`[[get]]、[[set]]`（当定义了访问器属性时，`[[get]][[set]]`就会被访问器属性覆盖）一样的能力，当你取一个对象的属性时`obj.name`，它实际是调用了内置方法`[[get]]`，但这个get是无法被我们显式调用的。Reflect就可以让我们显式调用这个`[[get]]`：`Reflect.get(obj, name)`，这和`obj.name`是一样的效果。
 
 和Proxy搭配使用，有什么优势呢？
 
@@ -466,7 +466,7 @@ user.name = "John"; // alerts: SET name=John
 
 ### 什么是变量提升
 
-用var和function声明的变量，可以在声明它们之前访问。js代码被执行时，会创建全局执行上下文，随后执行，在创建阶段，js引擎将var和function的声明移到顶层，这就是js的变量提升。
+用var和“function声明”的变量，可以在声明它们之前访问。js代码被执行时，会创建全局执行上下文，随后执行，在创建阶段，js引擎将var和function的声明移到顶层，这就是js的变量提升。
 
 注：var声明的变量会给一个undefined，**function一开始就是完整的函数**，let、const、class、函数表达式、箭头函数都不会变量提升。var和function对于重复的声明都会后者覆盖前者（非严格模式下）。
 
@@ -615,7 +615,7 @@ call比apply的性能要好，call传入参数的格式正是内部所需要的�
 
 ### Map和WeakMap的区别
 
-1. Map的键可以是任意值，WeakMap的键只能是对象；
+1. Map的键可以是任意类型的值，WeakMap的键只能是对象；
 2. Map的键值对保存插入顺序，WeakMap只是一个集合，无序；
 3. Map的键可枚举，WeakMap的键不可枚举，因此WeakMap就获取不到有哪些key以及key的长度；
 4. WeakMap的键是对象的弱引用，如果该对象没有被任何一个其它的变量引用，GC就会回收它
@@ -626,6 +626,17 @@ call比apply的性能要好，call传入参数的格式正是内部所需要的�
 2. Map可以很快获取长度，Object要手动计算；
 3. Map的键值对是保留插入顺序；
 4. 因为Object有原型，所以会有一些默认的属性存在
+
+### Map和Set的区别
+
+1. Map存储的是键值对，Set存储的是值的集合；
+2. Set里的元素具有唯一性
+
+### Map连续set两次Symbol会怎么样（频率：1）
+
+如果两个Symbol不一样，map中会出现两个键值对
+
+如果是同一个Symbol，map中就只有一个键值对。
 
 ### 浅拷贝方法
 
@@ -705,7 +716,7 @@ let gen = {
 
 ### 将类数组转换为数组的方法
 
-函数的arguments就是一个类数组，它还提供了lengh属性
+函数的arguments就是一个类数组，它还提供了lengh属性，类数组对象一般需要要能拿到length并且是可迭代的
 
 1. 扩展运算符 `[...arguments]`；
 2. `Array.from(arguments)`；
@@ -776,7 +787,7 @@ find返回数组中满足条件的第一个值
 
 some判断数组中是否有某个值
 
-### 谈谈事件循环（小红书）
+### 谈谈事件循环
 
 #### 把握两点：
 
@@ -869,7 +880,7 @@ console.log('console');
 
 ### js的本地存储方式
 
-Cookie、localStorage、sessionStorage、indexedDB
+Cookie、localStorage、sessionStorag	e、indexedDB
 
 ### Symbol的用处
 
@@ -897,3 +908,4 @@ function demo1() {
 demo1();
 ```
 
+### 堆栈（堆内存，栈内存）
