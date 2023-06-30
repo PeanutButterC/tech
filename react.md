@@ -217,3 +217,66 @@ function getFinalState(baseState, queue) {
   };
 ```
 
+### 用useRef保存列表的DOM引用
+
+ulRef是数组，用于保存多个`<li>`的dom引用，最重要的问题是如何保证组件多次rerender或者`<li>`数量变化后，ulRef能准确保存着多个`<li>`的最新dom引用。
+
+```javascript
+import { useState, useRef, forwardRef } from "react";
+
+export default function App() {
+  const [count, setCount] = useState(0);
+  const [todos, setTodos] = useState([
+    { id: 1, text: "java" },
+    { id: 2, text: "c++" },
+    { id: 3, text: "python" },
+  ]);
+  const ulRef = useRef(null);
+  if (ulRef.current === null) {
+    ulRef.current = [];
+  }
+
+  const items = todos.map((e, idx) => {
+    return (
+      <Item
+        idx={idx}
+        text={e.text}
+        key={e.id}
+        ref={ulRef}
+        onClick={() => handleClick(e.id)}
+      />
+    );
+  });
+
+  const handleClick = (id) => {
+    console.log(ulRef.current[id - 1].innerHTML);
+  };
+
+  console.log(ulRef.current);
+
+  return (
+    <>
+      <span>{count}</span>
+      <button onClick={() => setCount(count + 1)}>increment</button>
+      <ul>{items}</ul>
+    </>
+  );
+}
+
+const Item = forwardRef(function ({ text, onClick, idx }, refs) {
+  return (
+    <>
+      <li
+        className="item"
+        ref={(r) => {
+          refs.current[idx] = r;	// 关键点
+        }}
+      >
+        {text}
+      </li>
+      <button onClick={onClick}>btn</button>
+    </>
+  );
+});
+```
+
